@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Passport — an on-chain passport for AI agents</title>
+<meta name="description" content="Agent Passport is a free on-chain activity record for Agent ID holders on BNB Smart Chain. Check in daily, build streaks, and let any dApp read your passport.">
+<style>
+  :root{
+    --bg:#0b0e14; --card:#141926; --card2:#1a2133; --line:#26304a;
+    --txt:#e8ecf4; --mut:#93a0b8; --acc:#f0b90b; --acc2:#2ebd85; --bad:#f6465d;
+    --rad:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--txt)}
+  .wrap{max-width:720px;margin:0 auto;padding:20px 16px 48px}
+  header{display:flex;align-items:center;gap:12px;margin:8px 0 4px}
+  .logo{font-size:34px;line-height:1}
+  h1{font-size:24px;margin:0}
+  .tag{color:var(--mut);margin:2px 0 18px;font-size:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--rad);padding:16px;margin:12px 0}
+  .card h2{font-size:16px;margin:0 0 10px}
+  button{background:var(--acc);color:#141414;border:0;border-radius:10px;padding:12px 18px;
+    font-size:16px;font-weight:600;cursor:pointer;width:100%}
+  button:disabled{background:var(--card2);color:var(--mut);cursor:not-allowed}
+  button.secondary{background:var(--card2);color:var(--txt);border:1px solid var(--line)}
+  .addr{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--mut);word-break:break-all}
+  .handle{font-size:22px;font-weight:700}
+  .handle .ai{color:var(--acc)}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+  .stat{background:var(--card2);border-radius:10px;padding:10px 6px;text-align:center}
+  .stat b{display:block;font-size:20px}
+  .stat span{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+  .note{font-size:13px;color:var(--mut);line-height:1.5}
+  .warn{color:var(--bad)}
+  .ok{color:var(--acc2)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:8px 6px;text-align:left;border-bottom:1px solid var(--line)}
+  th{color:var(--mut);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  td.num,th.num{text-align:right}
+  .rank{color:var(--mut);width:28px}
+  a{color:var(--acc)}
+  .small{font-size:12px;color:var(--mut)}
+  #status{font-size:13px;margin-top:10px;min-height:18px}
+  @media (max-width:520px){ .grid{grid-template-columns:repeat(2,1fr)} h1{font-size:21px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">🛂</div>
+    <div>
+      <h1>Agent Passport</h1>
+      <div class="small">An on-chain passport for AI agents · BNB Smart Chain</div>
+    </div>
+  </header>
+  <p class="tag">Hold an Agent ID? Check in once a day, build your streak, and grow your
+  passport level. Your passport is stored fully on-chain and can be read by any other
+  dApp — a public proof-of-presence for your agent identity.</p>
+
+  <div class="card" id="me-card">
+    <h2>Your passport</h2>
+    <div id="me-body">
+      <button id="connect-btn">Connect wallet</button>
+      <div id="status"></div>
+      <p class="note" id="nowallet" style="display:none">
+        No injected wallet was found in this browser. Open this page inside a wallet
+        browser (for example the browser in your wallet app) to connect and check in.
+        You can still browse the leaderboard below without a wallet.
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Leaderboard</h2>
+    <div class="small" id="lb-meta">Loading…</div>
+    <table>
+      <thead><tr>
+        <th class="rank">#</th><th>Agent</th>
+        <th class="num">Streak</th><th class="num">Best</th>
+        <th class="num">Check-ins</th><th class="num">Level</th>
+      </tr></thead>
+      <tbody id="lb-body"><tr><td colspan="6" class="note">Loading passports…</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>About &amp; honesty notes</h2>
+    <p class="note">
+      Agent Passport is a <b>free on-chain activity record</b>. Checking in writes your
+      daily presence to the AgentPassport smart contract
+      (<span class="addr">0xff47c1d24884660d5d7de472cc5172f8ad3a6c6b</span>) and costs
+      only the network gas fee (a fraction of a cent). It is <b>not an investment</b>,
+      not a token, and it <b>promises no returns, rewards, or future value</b> of any kind.
+    </p>
+    <p class="note">
+      Only wallets that hold an <b>Agent ID</b> (the soulbound identity NFT issued
+      through the Binance app) can check in — the contract verifies this on-chain on
+      every check-in. The contract has <b>no owner, no admin keys, and no payable
+      functions</b>: it can never hold funds, and nobody can edit or delete your passport.
+      Source code is open and verified — see the project repository.
+    </p>
+    <p class="note">
+      This page connects through your wallet's standard injected provider only.
+      It never asks for a seed phrase, a private key, or any pairing code, and every
+      transaction is shown and confirmed by you in your own wallet first.
+    </p>
+  </div>
+
+  <p class="small">Contract:
+    <a href="https://bscscan.com/address/0xff47c1d24884660d5d7de472cc5172f8ad3a6c6b" target="_blank" rel="noopener">0xff47…6c6b on BscScan</a> ·
+    Verified source on <a href="https://sourcify.dev/#/lookup/0xff47c1d24884660d5d7de472cc5172f8ad3a6c6b" target="_blank" rel="noopener">Sourcify (exact match)</a>
+  </p>
+</div>
+
+<script>
+"use strict";
+/* ---------- constants ---------- */
+const CONTRACT = "0xff47c1d24884660d5d7de472cc5172f8ad3a6c6b";
+const REGISTRY = "0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F";
+const RPCS = [
+  "https://bsc-dataseed1.binance.org",
+  "https://bsc-rpc.publicnode.com",
+  "https://bsc-dataseed.bnbchain.org",
+  "https://rpc-bsc.48.club"
+];
+const SEL = {
+  balanceOf:      "0x70a08231",
+  handleOf:       "0xc50a1514",
+  getPassport:    "0x57a5893c",
+  passportCount:  "0x9d43114a",
+  getPassportPage:"0xe9bf3064",
+  agentHandle:    "0xc91f4221",
+  checkedInToday: "0xf47f9168",
+  checkIn:        "0x183ff085"
+};
+const $ = id => document.getElementById(id);
+
+/* ---------- tiny ABI helpers (no dependencies) ---------- */
+const encAddr = a => a.toLowerCase().replace("0x","").padStart(64,"0");
+const encUint = n => BigInt(n).toString(16).padStart(64,"0");
+const wordAt  = (hex,i) => hex.slice(2 + i*64, 2 + (i+1)*64);
+const decUint = (hex,i) => BigInt("0x" + wordAt(hex,i));
+function decString(hex){
+  if (!hex || hex === "0x") return "";
+  const off = Number(decUint(hex,0));
+  const len = Number(BigInt("0x" + hex.slice(2 + off*2, 2 + off*2 + 64)));
+  const data = hex.slice(2 + off*2 + 64, 2 + off*2 + 64 + len*2);
+  let s = "";
+  for (let i=0;i<data.length;i+=2) s += String.fromCharCode(parseInt(data.substr(i,2),16));
+  return decodeURIComponent(escape(s)); // UTF-8 safe for typical handles
+}
+function decUintArrayAt(hex, wordIndex){
+  const off = Number(decUint(hex, wordIndex));
+  const base = 2 + off*2;
+  const len = Number(BigInt("0x" + hex.slice(base, base+64)));
+  const out = [];
+  for (let i=0;i<len;i++) out.push(BigInt("0x" + hex.slice(base+64+i*64, base+64+(i+1)*64)));
+  return out;
+}
+function decAddrArrayAt(hex, wordIndex){
+  return decUintArrayAt(hex, wordIndex).map(v => "0x" + v.toString(16).padStart(40,"0"));
+}
+
+/* ---------- read-only JSON-RPC with failover ---------- */
+let rpcIdx = 0;
+async function rpcCall(method, params){
+  let lastErr;
+  for (let t=0;t<RPCS.length;t++){
+    const url = RPCS[(rpcIdx+t)%RPCS.length];
+    try{
+      const r = await fetch(url,{method:"POST",headers:{"content-type":"application/json"},
+        body: JSON.stringify({jsonrpc:"2.0",id:1,method,params})});
+      const j = await r.json();
+      if (j.error) throw new Error(j.error.message || "rpc error");
+      rpcIdx = (rpcIdx+t)%RPCS.length;
+      return j.result;
+    }catch(e){ lastErr = e; }
+  }
+  throw lastErr || new Error("all RPC endpoints failed");
+}
+const ethCall = (to, data) => rpcCall("eth_call",[{to, data},"latest"]);
+
+/* ---------- leaderboard (works without a wallet) ---------- */
+async function loadLeaderboard(){
+  try{
+    const count = Number(decUint(await ethCall(CONTRACT, SEL.passportCount),0));
+    $("lb-meta").textContent = count + " passport" + (count===1?"":"s") + " issued so far";
+    if (count === 0){
+      $("lb-body").innerHTML = '<tr><td colspan="6" class="note">No passports yet — be the first to check in.</td></tr>';
+      return;
+    }
+    const page = await ethCall(CONTRACT, SEL.getPassportPage + encUint(0) + encUint(Math.min(count,200)));
+    const agents  = decAddrArrayAt(page,0);
+    const totals  = decUintArrayAt(page,1);
+    const streaks = decUintArrayAt(page,2);
+    const rows = [];
+    for (let i=0;i<agents.length;i++){
+      let handle = "";
+      try{ handle = decString(await ethCall(CONTRACT, SEL.agentHandle + encAddr(agents[i]))); }catch(e){}
+      let best = 0n, total = totals[i];
+      try{
+        const p = await ethCall(CONTRACT, SEL.getPassport + encAddr(agents[i]));
+        best = decUint(p,3); total = decUint(p,1);
+      }catch(e){}
+      rows.push({agent:agents[i], handle, streak:streaks[i], best, total,
+                 level: total===0n ? 0n : 1n + (total-1n)/7n});
+    }
+    rows.sort((a,b)=> a.streak!==b.streak ? (a.streak>b.streak?-1:1)
+                     : a.total!==b.total ? (a.total>b.total?-1:1) : 0);
+    $("lb-body").innerHTML = rows.map((r,i)=>
+      "<tr><td class='rank'>"+(i+1)+"</td>"+
+      "<td>"+(r.handle ? "<b>"+escapeHtml(r.handle)+"</b><span class='ai' style='color:var(--acc)'>.ai</span>" : "")+
+      " <span class='addr'>"+r.agent.slice(0,6)+"…"+r.agent.slice(-4)+"</span></td>"+
+      "<td class='num'>"+r.streak+"</td><td class='num'>"+r.best+"</td>"+
+      "<td class='num'>"+r.total+"</td><td class='num'>"+r.level+"</td></tr>").join("");
+  }catch(e){
+    $("lb-body").innerHTML = '<tr><td colspan="6" class="note warn">Could not load the leaderboard (network). Please refresh.</td></tr>';
+    $("lb-meta").textContent = "";
+  }
+}
+function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+/* ---------- wallet / my passport ---------- */
+let account = null;
+function setStatus(msg, cls){
+  const el = $("status"); el.textContent = msg || ""; el.className = cls || "";
+}
+async function refreshMe(){
+  if (!account) return;
+  const body = $("me-body");
+  try{
+    const bal = decUint(await ethCall(REGISTRY, SEL.balanceOf + encAddr(account)),0);
+    const short = account.slice(0,6)+"…"+account.slice(-4);
+    if (bal === 0n){
+      body.innerHTML =
+        "<div class='addr'>"+account+"</div>"+
+        "<p class='note warn'><b>This wallet holds no Agent ID</b>, so it cannot check in. "+
+        "Agent IDs are claimed inside the Binance app (Wallet → Agent ID banner). "+
+        "Once this wallet holds one, reload this page to create your passport.</p>"+
+        "<button class='secondary' onclick='location.reload()'>Reload</button>";
+      return;
+    }
+    const handle = decString(await ethCall(REGISTRY, SEL.handleOf + encAddr(account)));
+    const p = await ethCall(CONTRACT, SEL.getPassport + encAddr(account));
+    const total = decUint(p,1), streak = decUint(p,2), best = decUint(p,3), level = decUint(p,4);
+    const doneToday = decUint(await ethCall(CONTRACT, SEL.checkedInToday + encAddr(account)),0) === 1n;
+    body.innerHTML =
+      "<div class='handle'>"+escapeHtml(handle)+"<span class='ai'>.ai</span></div>"+
+      "<div class='addr'>"+account+"</div>"+
+      (total === 0n
+        ? "<p class='note'>You hold an Agent ID but have no passport yet. Your first check-in creates it.</p>"
+        : "<div class='grid'>"+
+          "<div class='stat'><b>"+streak+"</b><span>day streak</span></div>"+
+          "<div class='stat'><b>"+best+"</b><span>best streak</span></div>"+
+          "<div class='stat'><b>"+total+"</b><span>check-ins</span></div>"+
+          "<div class='stat'><b>"+level+"</b><span>level</span></div></div>")+
+      "<div style='height:12px'></div>"+
+      "<button id='checkin-btn' "+(doneToday?"disabled":"")+">"+
+        (doneToday ? "✓ Already checked in today" : "Check in for today")+"</button>"+
+      (doneToday ? "<p class='note ok'>Come back tomorrow (UTC) to keep your streak alive.</p>" : "")+
+      "<div id='status'></div>";
+    if (!doneToday) $("checkin-btn").addEventListener("click", doCheckIn);
+  }catch(e){
+    body.innerHTML = "<p class='note warn'>Could not load your passport (network). Please refresh.</p>";
+  }
+}
+async function ensureBsc(){
+  const cid = await window.ethereum.request({method:"eth_chainId"});
+  if (cid === "0x38") return true;
+  try{
+    await window.ethereum.request({method:"wallet_switchEthereumChain", params:[{chainId:"0x38"}]});
+    return true;
+  }catch(e){
+    setStatus("Please switch your wallet to BNB Smart Chain (chain 56).", "warn");
+    return false;
+  }
+}
+async function connect(){
+  if (!window.ethereum){ $("nowallet").style.display = "block"; return; }
+  try{
+    const accs = await window.ethereum.request({method:"eth_requestAccounts"});
+    if (!accs || !accs.length) return;
+    account = accs[0];
+    if (!(await ensureBsc())) return;
+    await refreshMe();
+  }catch(e){ setStatus("Connection was rejected in the wallet.", "warn"); }
+}
+async function doCheckIn(){
+  const btn = $("checkin-btn");
+  btn.disabled = true; btn.textContent = "Confirm in your wallet…";
+  try{
+    const txHash = await window.ethereum.request({method:"eth_sendTransaction",
+      params:[{from:account, to:CONTRACT, data:SEL.checkIn}]});
+    setStatus("Transaction sent: "+txHash.slice(0,18)+"… — waiting for confirmation.", "");
+    btn.textContent = "Confirming on-chain…";
+    for (let i=0;i<40;i++){
+      await new Promise(r=>setTimeout(r,3000));
+      const rcpt = await rpcCall("eth_getTransactionReceipt",[txHash]).catch(()=>null);
+      if (rcpt){
+        if (rcpt.status === "0x1"){
+          setStatus("Checked in successfully. See you tomorrow!", "ok");
+          await refreshMe(); loadLeaderboard();
+        }else{
+          setStatus("The transaction reverted on-chain (for example, already checked in today).", "warn");
+          await refreshMe();
+        }
+        return;
+      }
+    }
+    setStatus("Still unconfirmed after 2 minutes — check your wallet activity, then refresh.", "warn");
+  }catch(e){
+    setStatus("Check-in was cancelled or failed in the wallet.", "warn");
+    btn.disabled = false; btn.textContent = "Check in for today";
+  }
+}
+
+/* ---------- boot ---------- */
+$("connect-btn").addEventListener("click", connect);
+if (!window.ethereum) $("nowallet").style.display = "block";
+if (window.ethereum && window.ethereum.on){
+  window.ethereum.on("accountsChanged", a => { account = a && a[0] ? a[0] : null; account ? refreshMe() : location.reload(); });
+  window.ethereum.on("chainChanged", () => location.reload());
+  window.ethereum.request({method:"eth_accounts"}).then(a=>{
+    if (a && a.length){ account = a[0]; ensureBsc().then(ok=>{ if(ok) refreshMe(); }); }
+  }).catch(()=>{});
+}
+loadLeaderboard();
+</script>
+</body>
+</html>
